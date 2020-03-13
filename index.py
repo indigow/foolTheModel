@@ -7,12 +7,12 @@ import matplotlib
 path_to_image = 'images/dog.jpg'
 path_to_hacked = 'hacked/dog.jpg'
 #ACTUAL_CLASS =207
-WANTED_CLASS = 852
+WANTED_CLASS = 852 #tennis_ball
 EPOCHS = 2
 LEARNING_RATE = .01
 LOSS = []
 
-def load_image(path_to_image):
+def load_image(path_to_image): #load an image
     max_dim = 512
     img = tf.io.read_file(path_to_image)
     img = tf.image.decode_image(img, channels=3)
@@ -25,7 +25,7 @@ def load_image(path_to_image):
     #img = tf.image.resize(img,new_shape)
     return img[tf.newaxis,:]
 
-def imshow(image,title=None):
+def imshow(image,title=None): #show an image
     if len(image.shape) > 3:
       image=tf.squeeze(image)
     plt.imshow(image)
@@ -35,17 +35,19 @@ def imshow(image,title=None):
 
 
 def loss(model,processedImage):
+    #compute the loss to optimize
+    #here the goal is to maximize the probability that the network predict the WANTED_CLASS
     y = model(processedImage)[0][WANTED_CLASS]
     return -y
 
-def gradient(model,image):
+def gradient(model,image):   #compute the gradient of the nerwork according to each pixel of the images
     with tf.GradientTape() as t :
         processedImage = tf.keras.applications.vgg19.preprocess_input(image*255)
         l = loss(model,processedImage)
-        LOSS.append(l.numpy())
+        LOSS.append(-l.numpy())
         return t.gradient(l,image)
 
-def train(model,image):
+def optimize(model,image):  #move from the actual image to another image that optimize the loss
    opt = tf.optimizers.Adam(learning_rate=LEARNING_RATE)
    for epoch in range(EPOCHS):
        print(epoch)
@@ -53,7 +55,7 @@ def train(model,image):
        opt.apply_gradients([(gr,image)])
        image.assign(clip_0_1(image))
 
-def clip_0_1(image):
+def clip_0_1(image): #to ensure that the value of the images are between 0 and 1
   return tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
 
 def plot_images(image,image0):
@@ -72,8 +74,7 @@ image0 = tf.Variable(image.initialized_value())
 #image0 = tf.image.resize(image0,(244,244))
 
 vgg = tf.keras.applications.VGG19(include_top=True, weights='imagenet')
-train(vgg,image)
-#print([-l for l in LOSS])
+optimize(vgg,image)
 prediction = tf.keras.applications.vgg19.decode_predictions(vgg(tf.keras.applications.vgg19.preprocess_input(image*255)).numpy())
 print(prediction)
 matplotlib.image.imsave(path_to_hacked, image.numpy()[0])
